@@ -1,13 +1,17 @@
+job_config: &job_config
+  working_directory: ~/code
+  docker:
+    - image: circleci/android:api-26-alpha
+  resource_class: xlarge
+  environment:
+    JVM_OPTS: -Xmx4096m
+    GRADLE_MAX_PARALLEL_FORKS: 2
+
+
 version: 2
 jobs:
   build:
-    working_directory: ~/code
-    docker:
-      - image: circleci/android:api-26-alpha
-    resource_class: xlarge
-    environment:
-      JVM_OPTS: -Xmx4096m
-      GRADLE_MAX_PARALLEL_FORKS: 2
+    << : *job_config
     steps:
       - checkout
       - run:
@@ -37,18 +41,65 @@ jobs:
       - run:
           name: Build
           command: SKIP_JAVADOC=true ./gradlew clean assemble --info --stacktrace
+      - persist_to_workspace:
+          root: ~/code
+          paths:
+            - ".cache-hash"
+            - "[a-zA-Z]*" # not .git
+
+  test_1:
+    << : *job_config
+    steps:
+      - attach_workspace:
+          at: ~/code
+      - restore_cache:
+          key: cache-{{ checksum ".cache-hash" }}
       - run:
           name: Test 1/2
           command: |
             SKIP_JAVADOC=true ./gradlew test --info --stacktrace --continue \
                 -Drobolectric.enabledSdks=16,17,18,19,21 -Drobotests.binResultsDir=shard1 \
-                -Drobolectric.alwaysIncludeVariantMarkersInTestName=true
+                -Drobolectric.alwaysIncludeVariantMarkersInTestName=true || touch build/shard1-tests-failed
+      - persist_to_workspace:
+          root: ~/code
+          paths:
+            - "build/shard1-tests-failed"
+            - "build/test-results"
+            - "*/build/test-results"
+            - "*/*/build/test-results"
+
+  test_2:
+    << : *job_config
+    steps:
+      - attach_workspace:
+          at: ~/code
+      - restore_cache:
+          key: cache-{{ checksum ".cache-hash" }}
       - run:
           name: Test 2/2
           command: |
             SKIP_JAVADOC=true ./gradlew test --info --stacktrace --continue \
                 -Drobolectric.enabledSdks=22,23,24,25,26 -Drobotests.binResultsDir=shard2 \
-                -Drobolectric.alwaysIncludeVariantMarkersInTestName=true
+                -Drobolectric.alwaysIncludeVariantMarkersInTestName=true || touch build/shard2-tests-failed
+      - persist_to_workspace:
+          root: ~/code
+          paths:
+            - "build/shard2-tests-failed"
+            - "build/test-results"
+            - "*/build/test-results"
+            - "*/*/build/test-results"
+
+  finish:
+    << : *job_config
+    steps:
+      - attach_workspace:
+          at: ~/code
+      - restore_cache:
+          key: cache-{{ checksum ".cache-hash" }}
+      - run:
+          name: Check Test Results
+          command: |
+            if [ -f build/test-results/shard1-failed ] || [ -f build/test-results/shard2-failed ]; then exit 1; fi
       - run:
           name: Collect Test Results
           command: |
@@ -66,3 +117,19 @@ jobs:
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               ./gradlew upload --no-rebuild
             fi
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - build
+      - test_1:
+          requires:
+            - build
+      - test_2:
+          requires:
+            - build
+      - finish:
+          requires:
+            - test_1
+            - test_2
