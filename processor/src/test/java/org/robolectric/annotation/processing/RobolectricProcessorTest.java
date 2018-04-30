@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
@@ -32,9 +33,9 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class RobolectricProcessorTest {
-  public static final Map<String,String> DEFAULT_OPTS = new HashMap<String, String>() {{
-    put(PACKAGE_OPT, "org.robolectric");
-  }};
+
+  public static final Map<String, String> DEFAULT_OPTS =
+      Collections.singletonMap(PACKAGE_OPT, "org.robolectric");
 
   @Test
   public void robolectricProcessor_supportsPackageOption() {
