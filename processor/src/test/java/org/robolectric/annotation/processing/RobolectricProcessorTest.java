@@ -7,6 +7,7 @@ import static com.google.testing.compile.JavaFileObjects.forSourceString;
 import static com.google.testing.compile.JavaSourceSubjectFactory.javaSource;
 import static com.google.testing.compile.JavaSourcesSubjectFactory.javaSources;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.robolectric.annotation.processing.RobolectricProcessor.SDK_CHECK_MODE;
 import static org.robolectric.annotation.processing.RobolectricProcessor.PACKAGE_OPT;
 import static org.robolectric.annotation.processing.RobolectricProcessor.SHOULD_INSTRUMENT_PKG_OPT;
 import static org.robolectric.annotation.processing.validator.Utils.ROBO_SOURCE;
@@ -14,6 +15,7 @@ import static org.robolectric.annotation.processing.validator.Utils.SHADOW_EXTRA
 import static org.robolectric.annotation.processing.validator.Utils.SHADOW_PROVIDER_SOURCE;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -24,7 +26,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
@@ -35,7 +36,10 @@ import org.junit.runners.JUnit4;
 public class RobolectricProcessorTest {
 
   public static final Map<String, String> DEFAULT_OPTS =
-      Collections.singletonMap(PACKAGE_OPT, "org.robolectric");
+      ImmutableMap.<String, String>builder()
+          .put(PACKAGE_OPT, "org.robolectric")
+          .put(SDK_CHECK_MODE, "OFF")
+          .build();
 
   @Test
   public void robolectricProcessor_supportsPackageOption() {

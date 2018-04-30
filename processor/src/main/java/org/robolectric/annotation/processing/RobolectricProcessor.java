@@ -20,6 +20,7 @@ import org.robolectric.annotation.processing.generator.ServiceLoaderGenerator;
 import org.robolectric.annotation.processing.generator.ShadowProviderGenerator;
 import org.robolectric.annotation.processing.validator.ImplementationValidator;
 import org.robolectric.annotation.processing.validator.ImplementsValidator;
+import org.robolectric.annotation.processing.validator.ImplementsValidator.SdkCheckMode;
 import org.robolectric.annotation.processing.validator.RealObjectValidator;
 import org.robolectric.annotation.processing.validator.ResetterValidator;
 import org.robolectric.annotation.processing.validator.Validator;
@@ -35,10 +36,13 @@ public class RobolectricProcessor extends AbstractProcessor {
   static final String PACKAGE_OPT = "org.robolectric.annotation.processing.shadowPackage";
   static final String SHOULD_INSTRUMENT_PKG_OPT = 
       "org.robolectric.annotation.processing.shouldInstrumentPackage";
-  
+  static final String SDK_CHECK_MODE =
+      "org.robolectric.annotation.processing.sdkCheckMode";
+
   private RobolectricModel model;
   private String shadowPackage;
   private boolean shouldInstrumentPackages;
+  private ImplementsValidator.SdkCheckMode sdkCheckMode;
   private Map<String, String> options;
   private boolean generated = false;
   private final List<Generator> generators = new ArrayList<>();
@@ -70,7 +74,7 @@ public class RobolectricProcessor extends AbstractProcessor {
     model = new RobolectricModel(environment.getElementUtils(), environment.getTypeUtils());
 
     addValidator(new ImplementationValidator(model, environment));
-    addValidator(new ImplementsValidator(model, environment));
+    addValidator(new ImplementsValidator(model, environment, sdkCheckMode));
     addValidator(new RealObjectValidator(model, environment));
     addValidator(new ResetterValidator(model, environment));
 
@@ -110,6 +114,8 @@ public class RobolectricProcessor extends AbstractProcessor {
       this.shadowPackage = options.get(PACKAGE_OPT);
       this.shouldInstrumentPackages =
           !"false".equalsIgnoreCase(options.get(SHOULD_INSTRUMENT_PKG_OPT));
+      this.sdkCheckMode =
+          SdkCheckMode.valueOf(options.getOrDefault(SDK_CHECK_MODE, "WARN").toUpperCase());
 
       if (this.shadowPackage == null) {
         throw new IllegalArgumentException("no package specified for " + PACKAGE_OPT);
